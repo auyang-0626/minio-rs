@@ -42,7 +42,7 @@ use bytes::{Buf, Bytes};
 use dashmap::DashMap;
 use hyper::http::Method;
 use reqwest::header::HeaderMap;
-use reqwest::Body;
+use reqwest::{Body, Proxy};
 use tokio::fs;
 
 use xmltree::Element;
@@ -63,6 +63,7 @@ pub struct ClientBuilder {
     ssl_cert_file: Option<PathBuf>,
     ignore_cert_check: Option<bool>,
     app_info: Option<(String, String)>,
+    proxy: Option<String>
 }
 
 impl ClientBuilder {
@@ -103,6 +104,11 @@ impl ClientBuilder {
         self
     }
 
+    pub fn proxy(mut self, proxy:Option<String>)-> Self{
+        self.proxy = proxy;
+        self
+    }
+
     /// Build the Client.
     pub fn build(self) -> Result<Client, Error> {
         let mut builder = reqwest::Client::builder().no_gzip();
@@ -130,6 +136,9 @@ impl ClientBuilder {
             let cert = reqwest::Certificate::from_pem(&buf)?;
             builder = builder.add_root_certificate(cert);
         }
+        if let Some(proxy) = self.proxy{
+            builder = builder.proxy(Proxy::http(proxy)?);
+        }
 
         let client = builder.build()?;
 
@@ -140,6 +149,7 @@ impl ClientBuilder {
             region_map: DashMap::new(),
         })
     }
+
 }
 
 /// Simple Storage Service (aka S3) client to perform bucket and object operations.
